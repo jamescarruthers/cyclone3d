@@ -17,6 +17,12 @@ export const WAVE_STEP_RATIO = 0.5;
 export const NUM_GERSTNER_WAVES = 8;
 export const WIND_DIRECTION = [1, 0] as const;
 
+// Wave spectrum (Phase 4)
+export const WAVE_LAMBDA_MIN = 6;
+export const WAVE_LAMBDA_MAX = 80;
+export const WAVE_LAMBDA_PEAK = 20;
+export const WAVE_DIR_SPREAD = Math.PI / 6; // ±30°
+
 // Depth profile
 export const SHELF_DEPTH = -6;
 export const DROPOFF_DEPTH = -30;

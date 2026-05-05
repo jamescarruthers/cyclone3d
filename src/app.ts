@@ -4,6 +4,11 @@ import {
   OCEAN_PLACEHOLDER_COLOUR,
   PHASE1_GRID_EXTENT,
   PHASE1_ISLAND_ANCHOR,
+  WAVE_DIR_SPREAD,
+  WAVE_LAMBDA_MAX,
+  WAVE_LAMBDA_MIN,
+  WAVE_LAMBDA_PEAK,
+  WIND_DIRECTION,
 } from '@/config';
 import { createRenderer } from '@/rendering/renderer';
 import { IsoCamera } from '@/rendering/camera';
@@ -12,10 +17,11 @@ import { HelicopterControls } from '@/entities/helicopterControls';
 import { Hud } from '@/hud';
 import { makeIsland, type Island } from '@/world/heightfield';
 import { buildGrid, type Grid } from '@/world/grid';
-import { BlockMesh } from '@/rendering/blockMesh';
+import { WaveBlocksMesh } from '@/rendering/waveBlocksMesh';
+import { makeSpectrum } from '@/rendering/waveSpectrum';
+import { hashSeed } from '@/procgen/rng';
 
-// Far-field placeholder ocean. The island mesh covers PHASE1_GRID_EXTENT
-// around the origin; this plane fills the rest of the visible area until
+// Far-field placeholder ocean for the area outside the test grid until
 // chunked streaming arrives in Phase 8.
 const FAR_OCEAN_SIZE = 8192;
 
@@ -28,10 +34,10 @@ export class App {
   private readonly controls = new HelicopterControls();
   private readonly hud: Hud;
   private readonly farOcean: THREE.Mesh;
-  private readonly waterPlane: THREE.Mesh;
-  private readonly blocks: BlockMesh;
+  private readonly blocks: WaveBlocksMesh;
   private readonly grid: Grid;
   private readonly islands: readonly Island[];
+  private elapsed = 0;
   private lastT = 0;
   private rafId = 0;
 
@@ -49,7 +55,7 @@ export class App {
     });
     this.farOcean = new THREE.Mesh(farGeom, farMat);
     this.farOcean.rotation.x = -Math.PI / 2;
-    this.farOcean.position.y = -0.05; // sit just under the island mesh to avoid z-fight
+    this.farOcean.position.y = -0.05;
     this.scene.add(this.farOcean);
 
     this.islands = [
@@ -70,29 +76,22 @@ export class App {
       `tris=${this.grid.triangles.length / 3} ` +
       `gen=${genMs.toFixed(1)}ms`,
     );
-    this.blocks = new BlockMesh(this.grid);
-    this.scene.add(this.blocks.mesh);
 
-    // Translucent water surface over the test grid so underwater prisms
-    // remain visible. Phase 5 replaces this with the proper depth-banded
-    // water shader.
-    const waterGeom = new THREE.PlaneGeometry(PHASE1_GRID_EXTENT, PHASE1_GRID_EXTENT);
-    const waterMat = new THREE.MeshStandardMaterial({
-      color: OCEAN_PLACEHOLDER_COLOUR,
-      roughness: 0.6,
-      metalness: 0.0,
-      transparent: true,
-      opacity: 0.55,
+    const spectrum = makeSpectrum({
+      seed: hashSeed(DEFAULT_WORLD_SEED, 'spectrum'),
+      windDir: WIND_DIRECTION,
+      dirSpread: WAVE_DIR_SPREAD,
+      minWavelength: WAVE_LAMBDA_MIN,
+      maxWavelength: WAVE_LAMBDA_MAX,
+      peakWavelength: WAVE_LAMBDA_PEAK,
     });
-    this.waterPlane = new THREE.Mesh(waterGeom, waterMat);
-    this.waterPlane.rotation.x = -Math.PI / 2;
-    this.waterPlane.position.y = 0;
-    this.scene.add(this.waterPlane);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.1);
-    sun.position.set(60, 120, 40);
-    this.scene.add(sun);
-    this.scene.add(new THREE.AmbientLight(0xb0d8ff, 0.45));
+    this.blocks = new WaveBlocksMesh(this.grid, spectrum, {
+      lightDir: new THREE.Vector3(-0.5, -1.0, -0.3).normalize(),
+      lightColor: new THREE.Color(0xffffff).multiplyScalar(1.1),
+      ambient: new THREE.Color(0xb0d8ff).multiplyScalar(0.45),
+    });
+    this.scene.add(this.blocks.mesh);
 
     this.scene.add(this.heli.mesh);
   }
@@ -119,14 +118,14 @@ export class App {
     this.heli.dispose();
     this.farOcean.geometry.dispose();
     (this.farOcean.material as THREE.Material).dispose();
-    this.waterPlane.geometry.dispose();
-    (this.waterPlane.material as THREE.Material).dispose();
     this.renderer.dispose();
   }
 
   private update(dt: number): void {
+    this.elapsed += dt;
     this.controls.update(this.heli, dt);
     this.camera.follow(this.heli.position);
+    this.blocks.setTime(this.elapsed);
     this.hud.tick(dt);
     const headingDeg = ((this.heli.heading * 180) / Math.PI) % 360;
     this.hud.render(this.heli.position.y, (headingDeg + 360) % 360);
