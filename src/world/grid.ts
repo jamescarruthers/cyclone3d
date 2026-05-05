@@ -19,6 +19,18 @@ export interface GridBounds {
   readonly maxZ: number;
 }
 
+// Vertex count of cell `cellIdx`: 4 for a quad, 3 for a triangle.
+export function cellVertexCount(grid: Grid, cellIdx: number): number {
+  return cellIdx < grid.quads.length / 4 ? 4 : 3;
+}
+
+// i'th corner vertex index of cell `cellIdx` (CCW, 0..vertexCount-1).
+export function cellVertex(grid: Grid, cellIdx: number, i: number): number {
+  const numQuads = grid.quads.length / 4;
+  if (cellIdx < numQuads) return grid.quads[cellIdx * 4 + i]!;
+  return grid.triangles[(cellIdx - numQuads) * 3 + i]!;
+}
+
 // A cell is either a quad (4 indices) or a triangle (3 indices). Stored
 // flat for cache friendliness; tags/centres are parallel arrays indexed
 // by cell number.
@@ -31,6 +43,13 @@ export interface Grid {
   readonly cellHeight: Float32Array; // sampled heightfield at centre
   readonly cellSize: Float32Array; // longest edge length, m
   readonly cellTag: Uint8Array; // Band enum per cell
+
+  // Adjacency: parallel to cell vertices. `cellEdgeStart[c]` is the offset
+  // into `cellNeighbour` for cell c's first edge. Edge i of cell c sits at
+  // `cellEdgeStart[c] + i`. Value is the neighbour cell index across that
+  // edge, or -1 for grid-boundary edges.
+  readonly cellEdgeStart: Uint32Array; // length cellCount + 1
+  readonly cellNeighbour: Int32Array; // total = sum of cell vertex counts
 }
 
 function spacingForDepth(depth: number): number {
@@ -117,6 +136,49 @@ export function buildGrid(
     ci++;
   }
 
+  // Adjacency: for each cell, build the parallel neighbour array.
+  const numQuads = quads.length / 4;
+  const totalEdges = numQuads * 4 + (leftoverTriangles.length / 3) * 3;
+  const cellEdgeStart = new Uint32Array(cellCount + 1);
+  const cellNeighbour = new Int32Array(totalEdges).fill(-1);
+
+  let off = 0;
+  for (let c = 0; c < cellCount; c++) {
+    cellEdgeStart[c] = off;
+    off += c < numQuads ? 4 : 3;
+  }
+  cellEdgeStart[cellCount] = off;
+
+  // Edge map: vertex pair → first cell that claimed it. When a second cell
+  // hits the same key, we link them in cellNeighbour at both edge slots.
+  const edgeMap = new Map<number, { cell: number; slot: number }>();
+  const KEY_SHIFT = 1 << 21; // supports up to 2M points per chunk
+
+  const setEdge = (cellIdx: number): void => {
+    const n = cellIdx < numQuads ? 4 : 3;
+    for (let i = 0; i < n; i++) {
+      const va = cellIdx < numQuads
+        ? quads[cellIdx * 4 + i]!
+        : leftoverTriangles[(cellIdx - numQuads) * 3 + i]!;
+      const vb = cellIdx < numQuads
+        ? quads[cellIdx * 4 + ((i + 1) % 4)]!
+        : leftoverTriangles[(cellIdx - numQuads) * 3 + ((i + 1) % 3)]!;
+      const lo = va < vb ? va : vb;
+      const hi = va < vb ? vb : va;
+      const key = lo * KEY_SHIFT + hi;
+      const slot = cellEdgeStart[cellIdx]! + i;
+      const existing = edgeMap.get(key);
+      if (existing) {
+        cellNeighbour[slot] = existing.cell;
+        cellNeighbour[existing.slot] = cellIdx;
+        edgeMap.delete(key);
+      } else {
+        edgeMap.set(key, { cell: cellIdx, slot });
+      }
+    }
+  };
+  for (let c = 0; c < cellCount; c++) setEdge(c);
+
   return {
     points: smoothPoints,
     quads,
@@ -126,6 +188,8 @@ export function buildGrid(
     cellHeight,
     cellSize,
     cellTag,
+    cellEdgeStart,
+    cellNeighbour,
   };
 }
 
