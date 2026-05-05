@@ -3,7 +3,6 @@ import {
   DEFAULT_WORLD_SEED,
   OCEAN_PLACEHOLDER_COLOUR,
   PHASE1_GRID_EXTENT,
-  PHASE1_GRID_RESOLUTION,
   PHASE1_ISLAND_ANCHOR,
 } from '@/config';
 import { createRenderer } from '@/rendering/renderer';
@@ -11,8 +10,9 @@ import { IsoCamera } from '@/rendering/camera';
 import { Helicopter } from '@/entities/helicopter';
 import { HelicopterControls } from '@/entities/helicopterControls';
 import { Hud } from '@/hud';
-import { LandMesh } from '@/rendering/landMesh';
 import { makeIsland, type Island } from '@/world/heightfield';
+import { buildGrid, type Grid } from '@/world/grid';
+import { CellMesh } from '@/rendering/cellMesh';
 
 // Far-field placeholder ocean. The island mesh covers PHASE1_GRID_EXTENT
 // around the origin; this plane fills the rest of the visible area until
@@ -28,7 +28,8 @@ export class App {
   private readonly controls = new HelicopterControls();
   private readonly hud: Hud;
   private readonly farOcean: THREE.Mesh;
-  private readonly land: LandMesh;
+  private readonly cells: CellMesh;
+  private readonly grid: Grid;
   private readonly islands: readonly Island[];
   private lastT = 0;
   private rafId = 0;
@@ -53,11 +54,23 @@ export class App {
     this.islands = [
       makeIsland(PHASE1_ISLAND_ANCHOR[0], PHASE1_ISLAND_ANCHOR[1], DEFAULT_WORLD_SEED),
     ];
-    this.land = new LandMesh(this.islands, {
-      extent: PHASE1_GRID_EXTENT,
-      resolution: PHASE1_GRID_RESOLUTION,
-    });
-    this.scene.add(this.land.mesh);
+    const half = PHASE1_GRID_EXTENT / 2;
+    const tStart = performance.now();
+    this.grid = buildGrid(
+      this.islands,
+      { minX: -half, maxX: half, minZ: -half, maxZ: half },
+      DEFAULT_WORLD_SEED,
+    );
+    const genMs = performance.now() - tStart;
+    // eslint-disable-next-line no-console
+    console.info(
+      `[grid] cells=${this.grid.cellCount} ` +
+      `quads=${this.grid.quads.length / 4} ` +
+      `tris=${this.grid.triangles.length / 3} ` +
+      `gen=${genMs.toFixed(1)}ms`,
+    );
+    this.cells = new CellMesh(this.grid);
+    this.scene.add(this.cells.mesh);
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.1);
     sun.position.set(60, 120, 40);
@@ -85,7 +98,7 @@ export class App {
     cancelAnimationFrame(this.rafId);
     this.controls.detach(window);
     window.removeEventListener('resize', this.onResize);
-    this.land.dispose();
+    this.cells.dispose();
     this.heli.dispose();
     this.farOcean.geometry.dispose();
     (this.farOcean.material as THREE.Material).dispose();
