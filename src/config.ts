@@ -47,9 +47,8 @@ export const ISLAND_SANDBAR_AMPLITUDE = 1.2;
 // hand-placed island).
 export const DEFAULT_WORLD_SEED = 0x5a17e1;
 
-// Phase 1 single-island test mesh
+// Phase 1+ single-island test mesh extent
 export const PHASE1_GRID_EXTENT = 1024; // metres covered by the test mesh
-export const PHASE1_GRID_RESOLUTION = 4; // metres per quad
 export const PHASE1_ISLAND_ANCHOR = [0, 0] as const;
 
 // Helicopter
