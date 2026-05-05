@@ -48,7 +48,8 @@ float waveHeight(vec2 p, float cellSize, float depth) {
     }
 
     h *= ampMod;
-    float step = max(cellSize * uWaveStepRatio, 0.001);
+    if (uWaveStepRatio <= 0.0) return h;
+    float step = cellSize * uWaveStepRatio;
     return floor(h / step + 0.5) * step;
 }
 

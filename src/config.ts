@@ -13,12 +13,11 @@ export const WAVE_CELL_DEEP = 6;
 export const WAVE_CELL_SHORE = 1.5;
 export const WAVE_AMPLITUDE_DEEP = 2.0;
 export const WAVE_AMPLITUDE_SHORE = 0.25;
-// Quantisation: cellSize × WAVE_STEP_RATIO. SPEC §World scale specified 0.5,
-// but with normalised wave amplitudes the typical |h| (~0.4 m in deep) is
-// well below a 3 m step and quantises to 0 — water never animates. 0.07
-// gives ~0.42 m steps in deep / 0.105 m steps near shore — fine enough for
-// adjacent cells to read as smooth swell rather than harsh discrete blocks.
-export const WAVE_STEP_RATIO = 0.07;
+// Quantisation: cellSize × WAVE_STEP_RATIO. Set to 0 to disable — each cell
+// then takes its continuous wave-function value at its centre, giving smooth
+// stepped swell rather than discrete plateaus. Set to ~0.07 (deep step ~0.42 m,
+// shore step ~0.105 m) for the original "blocky waves" aesthetic.
+export const WAVE_STEP_RATIO = 0;
 export const NUM_GERSTNER_WAVES = 8;
 export const WIND_DIRECTION = [1, 0] as const;
 
