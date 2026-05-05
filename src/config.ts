@@ -51,6 +51,12 @@ export const DEFAULT_WORLD_SEED = 0x5a17e1;
 export const PHASE1_GRID_EXTENT = 1024; // metres covered by the test mesh
 export const PHASE1_ISLAND_ANCHOR = [0, 0] as const;
 
+// Phase 3 block extrusion: depth at which boundary side walls terminate.
+// Sits below ABYSSAL_DEPTH so the seabed reads as a thick slab from any angle.
+export const BLOCK_BASE_DEPTH = -65;
+// Side faces are tinted darker than the cell's top face for visual depth cue.
+export const SIDE_FACE_TINT = 0.7;
+
 // Helicopter
 export const HELI_CRUISE_SPEED = 30;
 export const HELI_MAX_ALTITUDE = 100;

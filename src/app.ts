@@ -12,7 +12,7 @@ import { HelicopterControls } from '@/entities/helicopterControls';
 import { Hud } from '@/hud';
 import { makeIsland, type Island } from '@/world/heightfield';
 import { buildGrid, type Grid } from '@/world/grid';
-import { CellMesh } from '@/rendering/cellMesh';
+import { BlockMesh } from '@/rendering/blockMesh';
 
 // Far-field placeholder ocean. The island mesh covers PHASE1_GRID_EXTENT
 // around the origin; this plane fills the rest of the visible area until
@@ -28,7 +28,8 @@ export class App {
   private readonly controls = new HelicopterControls();
   private readonly hud: Hud;
   private readonly farOcean: THREE.Mesh;
-  private readonly cells: CellMesh;
+  private readonly waterPlane: THREE.Mesh;
+  private readonly blocks: BlockMesh;
   private readonly grid: Grid;
   private readonly islands: readonly Island[];
   private lastT = 0;
@@ -69,8 +70,24 @@ export class App {
       `tris=${this.grid.triangles.length / 3} ` +
       `gen=${genMs.toFixed(1)}ms`,
     );
-    this.cells = new CellMesh(this.grid);
-    this.scene.add(this.cells.mesh);
+    this.blocks = new BlockMesh(this.grid);
+    this.scene.add(this.blocks.mesh);
+
+    // Translucent water surface over the test grid so underwater prisms
+    // remain visible. Phase 5 replaces this with the proper depth-banded
+    // water shader.
+    const waterGeom = new THREE.PlaneGeometry(PHASE1_GRID_EXTENT, PHASE1_GRID_EXTENT);
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: OCEAN_PLACEHOLDER_COLOUR,
+      roughness: 0.6,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.55,
+    });
+    this.waterPlane = new THREE.Mesh(waterGeom, waterMat);
+    this.waterPlane.rotation.x = -Math.PI / 2;
+    this.waterPlane.position.y = 0;
+    this.scene.add(this.waterPlane);
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.1);
     sun.position.set(60, 120, 40);
@@ -98,10 +115,12 @@ export class App {
     cancelAnimationFrame(this.rafId);
     this.controls.detach(window);
     window.removeEventListener('resize', this.onResize);
-    this.cells.dispose();
+    this.blocks.dispose();
     this.heli.dispose();
     this.farOcean.geometry.dispose();
     (this.farOcean.material as THREE.Material).dispose();
+    this.waterPlane.geometry.dispose();
+    (this.waterPlane.material as THREE.Material).dispose();
     this.renderer.dispose();
   }
 
