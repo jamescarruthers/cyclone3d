@@ -214,13 +214,15 @@ export class ShadowField {
 
   private computeCliff(): void {
     // For each water texel, find distance to the nearest land texel within
-    // CLIFF_RADIUS. Cliff intensity falls off linearly with that distance.
-    // Land texels themselves are tagged 0 (waves are blocked at land anyway).
+    // CLIFF_RADIUS. Search the land mask at ITS native resolution (finer
+    // than the shadow grid) so we don't miss thin shorelines.
     const sizeX = this.bounds.maxX - this.bounds.minX;
     const sizeZ = this.bounds.maxZ - this.bounds.minZ;
     const dx = sizeX / this.resolution;
     const dz = sizeZ / this.resolution;
-    const radiusTexels = Math.ceil(CLIFF_RADIUS / Math.min(dx, dz));
+    const landDx = sizeX / this.landMaskRes;
+    const landDz = sizeZ / this.landMaskRes;
+    const radius = Math.ceil(CLIFF_RADIUS / Math.min(landDx, landDz));
 
     for (let j = 0; j < this.resolution; j++) {
       const z0 = this.bounds.minZ + (j + 0.5) * dz;
@@ -229,12 +231,12 @@ export class ShadowField {
         let cliff = 0;
         if (!this.isLand(x0, z0)) {
           let minDist = CLIFF_RADIUS + 1;
-          for (let dj = -radiusTexels; dj <= radiusTexels; dj++) {
-            const z = z0 + dj * dz;
-            for (let di = -radiusTexels; di <= radiusTexels; di++) {
-              const x = x0 + di * dx;
+          for (let dj = -radius; dj <= radius; dj++) {
+            const z = z0 + dj * landDz;
+            for (let di = -radius; di <= radius; di++) {
+              const x = x0 + di * landDx;
               if (this.isLand(x, z)) {
-                const d = Math.hypot(di * dx, dj * dz);
+                const d = Math.hypot(di * landDx, dj * landDz);
                 if (d < minDist) minDist = d;
               }
             }
