@@ -4,6 +4,7 @@ import {
   CAUSTIC_INTENSITY,
   CAUSTIC_SCALE,
   CAUSTIC_SPEED,
+  CLIFF_CHOP_AMPLITUDE,
   DEEP_TINT,
   DROPOFF_DEPTH,
   FOAM_AMP_THRESHOLD,
@@ -206,6 +207,9 @@ export class WaveBlocksMesh {
         uCausticIntensity: { value: CAUSTIC_INTENSITY },
         uFoamAmpThreshold: { value: FOAM_AMP_THRESHOLD },
         uFoamDepthThreshold: { value: FOAM_DEPTH_THRESHOLD },
+        uShadowMap: { value: null as THREE.Texture | null },
+        uShadowBounds: { value: new THREE.Vector4(0, 0, 1, 1) },
+        uCliffChopAmplitude: { value: CLIFF_CHOP_AMPLITUDE },
       },
     });
 
@@ -215,6 +219,26 @@ export class WaveBlocksMesh {
 
   setTime(t: number): void {
     this.material.uniforms.uTime!.value = t;
+  }
+
+  setShadowField(texture: THREE.Texture, bounds: THREE.Vector4): void {
+    this.material.uniforms.uShadowMap!.value = texture;
+    (this.material.uniforms.uShadowBounds!.value as THREE.Vector4).copy(bounds);
+  }
+
+  // Rotate the existing wave directions in place by `deltaAngle` radians.
+  // Used when wind direction changes at runtime (Phase 6) — keeps the
+  // amplitudes/wavelengths/phases stable so the wave field continues smoothly.
+  rotateWaveDirs(deltaAngle: number): void {
+    const cos = Math.cos(deltaAngle);
+    const sin = Math.sin(deltaAngle);
+    const arr = this.material.uniforms.uWaveDir!.value as THREE.Vector2[];
+    for (const v of arr) {
+      const x = v.x;
+      const y = v.y;
+      v.x = x * cos - y * sin;
+      v.y = x * sin + y * cos;
+    }
   }
 
   dispose(): void {

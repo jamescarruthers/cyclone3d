@@ -18,6 +18,13 @@ uniform float uDropoffDepth; // negative metres
 uniform float uSeaLevel;
 uniform float uWaveStepRatio;
 
+// Phase 6 shadow / cliff field. R = shadow attenuation in [0, 1] (1 = full
+// waves, 0 = full lee). G = cliff proximity. uShadowBounds is (minX, minZ,
+// sizeX, sizeZ) in world space.
+uniform sampler2D uShadowMap;
+uniform vec4 uShadowBounds;
+uniform float uCliffChopAmplitude;
+
 attribute vec2 aWaveCentre;
 attribute float aWaveSize;
 attribute float aWaveDepth;   // static heightfield at wave centre
@@ -30,6 +37,12 @@ varying vec3 vColor;
 varying vec3 vNormal;
 varying float vWaveDepth;
 varying float vWaveY;
+
+vec2 sampleShadowField(vec2 p) {
+    vec2 uv = (p - uShadowBounds.xy) / uShadowBounds.zw;
+    uv = clamp(uv, 0.0, 1.0);
+    return texture2DLod(uShadowMap, uv, 0.0).rg;
+}
 
 float waveHeight(vec2 p, float cellSize, float depth) {
     float ampMod = mix(
@@ -48,6 +61,20 @@ float waveHeight(vec2 p, float cellSize, float depth) {
     }
 
     h *= ampMod;
+
+    vec2 sf = sampleShadowField(p);
+    float shadow = sf.x;
+    float cliff = sf.y;
+    h *= shadow;
+
+    if (cliff > 0.0) {
+        // Standing-wave chop near cliffs: a fast cross-pattern oscillation
+        // scaled by the local depth amplitude so deep cliffs ring louder
+        // than shore-line cliffs (which are amplitude-suppressed anyway).
+        float chop = sin(p.x * 0.45 + uTime * 3.2) * cos(p.y * 0.55 - uTime * 2.7);
+        h += cliff * uCliffChopAmplitude * ampMod * chop;
+    }
+
     if (uWaveStepRatio <= 0.0) return h;
     float step = cellSize * uWaveStepRatio;
     return floor(h / step + 0.5) * step;

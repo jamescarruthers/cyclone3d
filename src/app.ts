@@ -8,6 +8,7 @@ import {
   WAVE_LAMBDA_MIN,
   WAVE_LAMBDA_PEAK,
   WIND_DIRECTION,
+  WIND_ROTATE_STEP,
 } from '@/config';
 import { createRenderer } from '@/rendering/renderer';
 import { IsoCamera } from '@/rendering/camera';
@@ -16,6 +17,7 @@ import { HelicopterControls } from '@/entities/helicopterControls';
 import { Hud } from '@/hud';
 import { makeIsland, type Island } from '@/world/heightfield';
 import { buildGrid, type Grid } from '@/world/grid';
+import { ShadowField } from '@/world/shadowField';
 import { WaveBlocksMesh } from '@/rendering/waveBlocksMesh';
 import { makeSpectrum } from '@/rendering/waveSpectrum';
 import { hashSeed } from '@/procgen/rng';
@@ -31,6 +33,8 @@ export class App {
   private readonly blocks: WaveBlocksMesh;
   private readonly grid: Grid;
   private readonly islands: readonly Island[];
+  private readonly shadow: ShadowField;
+  private windAngle: number;
   private elapsed = 0;
   private lastT = 0;
   private rafId = 0;
@@ -76,12 +80,24 @@ export class App {
     });
     this.scene.add(this.blocks.mesh);
 
+    const tShadowStart = performance.now();
+    this.shadow = new ShadowField(
+      this.islands,
+      { minX: -half, maxX: half, minZ: -half, maxZ: half },
+      WIND_DIRECTION,
+    );
+    this.windAngle = Math.atan2(WIND_DIRECTION[1], WIND_DIRECTION[0]);
+    this.blocks.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
+    // eslint-disable-next-line no-console
+    console.info(`[shadow] init=${(performance.now() - tShadowStart).toFixed(1)}ms`);
+
     this.scene.add(this.heli.mesh);
   }
 
   start(): void {
     this.controls.attach(window);
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('keydown', this.onKeyDown);
     this.lastT = performance.now();
     const loop = (t: number): void => {
       const dt = Math.min(0.05, (t - this.lastT) / 1000);
@@ -97,7 +113,9 @@ export class App {
     cancelAnimationFrame(this.rafId);
     this.controls.detach(window);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKeyDown);
     this.blocks.dispose();
+    this.shadow.dispose();
     this.heli.dispose();
     this.renderer.dispose();
   }
@@ -121,5 +139,19 @@ export class App {
     const h = this.container.clientHeight;
     this.renderer.setSize(w, h);
     this.camera.setAspect(w / h);
+  };
+
+  private readonly onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code !== 'KeyR') return;
+    const delta = e.shiftKey ? -WIND_ROTATE_STEP : WIND_ROTATE_STEP;
+    this.windAngle += delta;
+    const t = performance.now();
+    this.shadow.setWindAngle(this.windAngle);
+    this.blocks.rotateWaveDirs(delta);
+    // eslint-disable-next-line no-console
+    console.info(
+      `[wind] angle=${((this.windAngle * 180) / Math.PI).toFixed(0)}° ` +
+      `rebuild=${(performance.now() - t).toFixed(1)}ms`,
+    );
   };
 }
