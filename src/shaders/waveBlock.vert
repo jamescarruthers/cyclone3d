@@ -25,6 +25,11 @@ uniform sampler2D uShadowMap;
 uniform vec4 uShadowBounds;
 uniform float uCliffChopAmplitude;
 
+// Phase 7 rotor wash. xy = heli XZ in world space. z = intensity in [0, 1]
+// (1 when very low, 0 well above ROTOR_MAX_ALTITUDE).
+uniform vec3 uRotorWash;
+uniform float uRotorRadius;
+
 attribute vec2 aWaveCentre;
 attribute float aWaveSize;
 attribute float aWaveDepth;   // static heightfield at wave centre
@@ -76,6 +81,17 @@ float waveHeight(vec2 p, float cellSize, float depth) {
         // than shore-line cliffs (which are amplitude-suppressed anyway).
         float chop = sin(p.x * 0.45 + uTime * 3.2) * cos(p.y * 0.55 - uTime * 2.7);
         h += cliff * uCliffChopAmplitude * ampMod * chop;
+    }
+
+    // Rotor wash: cells under the rotor are damped to ~30% amplitude and a
+    // fast outward radial ripple is added on top. SPEC §Rotor wash.
+    if (uRotorWash.z > 0.0) {
+        float washDist = distance(p, uRotorWash.xy);
+        float washMask = (1.0 - smoothstep(0.0, uRotorRadius, washDist)) * uRotorWash.z;
+        if (washMask > 0.0) {
+            h *= (1.0 - 0.7 * washMask);
+            h += washMask * sin(washDist * 4.0 - uTime * 8.0) * 0.2;
+        }
     }
 
     if (uWaveStepRatio <= 0.0) return h;

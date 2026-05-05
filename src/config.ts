@@ -90,6 +90,18 @@ export const CLIFF_RADIUS = 16;             // metres; cliff influence falloff
 export const CLIFF_CHOP_AMPLITUDE = 0.6;    // metres of standing-wave at peak
 export const WIND_ROTATE_STEP = Math.PI / 8; // 22.5° per keypress
 
+// Phase 7 helicopter VFX
+export const ROTOR_RADIUS = 8;              // metres; wash effect falloff
+export const ROTOR_MAX_ALTITUDE = 12;       // metres; intensity 1 at 0, 0 at this altitude
+export const HELI_SHADOW_RADIUS = 5;        // metres at sea-level reference
+export const HELI_SHADOW_MAX_ALTITUDE = 80; // metres above which shadow vanishes
+export const HELI_SHADOW_OPACITY_MAX = 0.5; // opacity at altitude 0
+export const SPRAY_PARTICLE_COUNT = 240;
+export const SPRAY_ALTITUDE_THRESHOLD = 5;  // metres; spray spawns below this over water
+export const SPRAY_SPAWN_RATE = 200;        // particles per second when active
+export const SPRAY_PARTICLE_SIZE = 0.45;    // metres
+export const SPRAY_PARTICLE_LIFE = 1.0;     // seconds, ±0.3 jitter
+
 // Helicopter
 export const HELI_CRUISE_SPEED = 30;
 export const HELI_MAX_ALTITUDE = 100;

@@ -3,6 +3,9 @@ import {
   DEFAULT_WORLD_SEED,
   PHASE1_GRID_EXTENT,
   PHASE1_ISLAND_ANCHOR,
+  ROTOR_MAX_ALTITUDE,
+  SEA_LEVEL,
+  SPRAY_ALTITUDE_THRESHOLD,
   WAVE_DIR_SPREAD,
   WAVE_LAMBDA_MAX,
   WAVE_LAMBDA_MIN,
@@ -14,12 +17,15 @@ import { createRenderer } from '@/rendering/renderer';
 import { IsoCamera } from '@/rendering/camera';
 import { Helicopter } from '@/entities/helicopter';
 import { HelicopterControls } from '@/entities/helicopterControls';
+import { HelicopterShadow } from '@/entities/helicopterShadow';
 import { Hud } from '@/hud';
-import { makeIsland, type Island } from '@/world/heightfield';
+import { height, makeIsland, type Island } from '@/world/heightfield';
 import { buildGrid, type Grid } from '@/world/grid';
 import { ShadowField } from '@/world/shadowField';
+import { sampleWaveY } from '@/world/waveSample';
+import { Spray } from '@/rendering/spray';
 import { WaveBlocksMesh } from '@/rendering/waveBlocksMesh';
-import { makeSpectrum } from '@/rendering/waveSpectrum';
+import { makeSpectrum, type WaveSpectrum } from '@/rendering/waveSpectrum';
 import { hashSeed } from '@/procgen/rng';
 
 export class App {
@@ -34,6 +40,9 @@ export class App {
   private readonly grid: Grid;
   private readonly islands: readonly Island[];
   private readonly shadow: ShadowField;
+  private readonly heliShadow: HelicopterShadow;
+  private readonly spray: Spray;
+  private readonly spectrum: WaveSpectrum;
   private windAngle: number;
   private elapsed = 0;
   private lastT = 0;
@@ -64,7 +73,7 @@ export class App {
       `gen=${genMs.toFixed(1)}ms`,
     );
 
-    const spectrum = makeSpectrum({
+    this.spectrum = makeSpectrum({
       seed: hashSeed(DEFAULT_WORLD_SEED, 'spectrum'),
       windDir: WIND_DIRECTION,
       dirSpread: WAVE_DIR_SPREAD,
@@ -73,7 +82,7 @@ export class App {
       peakWavelength: WAVE_LAMBDA_PEAK,
     });
 
-    this.blocks = new WaveBlocksMesh(this.grid, spectrum, {
+    this.blocks = new WaveBlocksMesh(this.grid, this.spectrum, {
       lightDir: new THREE.Vector3(-0.5, -1.0, -0.3).normalize(),
       lightColor: new THREE.Vector3(1.1, 1.1, 1.1),
       ambient: new THREE.Vector3(0xb0 / 255, 0xd8 / 255, 1.0).multiplyScalar(0.45),
@@ -90,6 +99,12 @@ export class App {
     this.blocks.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
     // eslint-disable-next-line no-console
     console.info(`[shadow] init=${(performance.now() - tShadowStart).toFixed(1)}ms`);
+
+    this.heliShadow = new HelicopterShadow();
+    this.scene.add(this.heliShadow.mesh);
+
+    this.spray = new Spray(hashSeed(DEFAULT_WORLD_SEED, 'spray'));
+    this.scene.add(this.spray.points);
 
     this.scene.add(this.heli.mesh);
   }
@@ -116,6 +131,8 @@ export class App {
     window.removeEventListener('keydown', this.onKeyDown);
     this.blocks.dispose();
     this.shadow.dispose();
+    this.heliShadow.dispose();
+    this.spray.dispose();
     this.heli.dispose();
     this.renderer.dispose();
   }
@@ -125,9 +142,32 @@ export class App {
     this.controls.update(this.heli, dt);
     this.camera.follow(this.heli.position);
     this.blocks.setTime(this.elapsed);
+
+    // Phase 7 VFX:
+    // - Surface Y under the heli (terrain or wave) for shadow placement.
+    // - Rotor wash uniform drives wave-shader damping + radial ripple.
+    // - Spray spawns when low + over water.
+    const heliX = this.heli.position.x;
+    const heliZ = this.heli.position.z;
+    const heliY = this.heli.position.y;
+    const terrainDepth = height(this.islands, heliX, heliZ);
+    const overWater = terrainDepth <= 0;
+    const surfaceY = overWater
+      ? SEA_LEVEL + sampleWaveY(this.spectrum, heliX, heliZ, terrainDepth, this.elapsed)
+      : terrainDepth;
+
+    const altitude = heliY - surfaceY;
+    this.heliShadow.setPosition(heliX, heliZ, surfaceY, altitude);
+
+    const washIntensity = Math.max(0, 1 - altitude / ROTOR_MAX_ALTITUDE);
+    this.blocks.setRotorWash(heliX, heliZ, washIntensity);
+
+    const sprayActive = altitude < SPRAY_ALTITUDE_THRESHOLD && overWater;
+    this.spray.update(dt, heliX, heliZ, sprayActive);
+
     this.hud.tick(dt);
     const headingDeg = ((this.heli.heading * 180) / Math.PI) % 360;
-    this.hud.render(this.heli.position.y, (headingDeg + 360) % 360);
+    this.hud.render(heliY, (headingDeg + 360) % 360);
   }
 
   private render(): void {

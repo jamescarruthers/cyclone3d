@@ -7,6 +7,7 @@ import {
   CLIFF_CHOP_AMPLITUDE,
   DEEP_TINT,
   DROPOFF_DEPTH,
+  ROTOR_RADIUS,
   FOAM_AMP_THRESHOLD,
   FOAM_DEPTH_THRESHOLD,
   FOAM_TINT,
@@ -210,6 +211,8 @@ export class WaveBlocksMesh {
         uShadowMap: { value: null as THREE.Texture | null },
         uShadowBounds: { value: new THREE.Vector4(0, 0, 1, 1) },
         uCliffChopAmplitude: { value: CLIFF_CHOP_AMPLITUDE },
+        uRotorWash: { value: new THREE.Vector3(0, 0, 0) },
+        uRotorRadius: { value: ROTOR_RADIUS },
       },
     });
 
@@ -224,6 +227,11 @@ export class WaveBlocksMesh {
   setShadowField(texture: THREE.Texture, bounds: THREE.Vector4): void {
     this.material.uniforms.uShadowMap!.value = texture;
     (this.material.uniforms.uShadowBounds!.value as THREE.Vector4).copy(bounds);
+  }
+
+  setRotorWash(heliX: number, heliZ: number, intensity: number): void {
+    const v = this.material.uniforms.uRotorWash!.value as THREE.Vector3;
+    v.set(heliX, heliZ, intensity);
   }
 
   // Rotate the existing wave directions in place by `deltaAngle` radians.
