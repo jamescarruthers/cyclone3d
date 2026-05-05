@@ -116,15 +116,21 @@ export class ChunkManager {
   }
 
   private loadChunk(cx: number, cz: number): void {
-    const chunk = new Chunk(
-      this.worldSeed,
-      cx,
-      cz,
-      this.spectrum,
-      this.lighting,
-      this.windDir,
-    );
-    this.chunks.set(chunkKey(cx, cz), chunk);
-    this.scene.add(chunk.mesh.mesh);
+    try {
+      const chunk = new Chunk(
+        this.worldSeed,
+        cx,
+        cz,
+        this.spectrum,
+        this.lighting,
+        this.windDir,
+      );
+      this.chunks.set(chunkKey(cx, cz), chunk);
+      this.scene.add(chunk.mesh.mesh);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[chunks] failed to load (${cx}, ${cz}):`, err);
+      throw err;
+    }
   }
 }
