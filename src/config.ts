@@ -80,6 +80,16 @@ export const BLOCK_BASE_DEPTH = -65;
 // Side faces are tinted darker than the cell's top face for visual depth cue.
 export const SIDE_FACE_TINT = 0.7;
 
+// Phase 6 wave shadow / wave–island interaction
+export const SHADOW_RESOLUTION = 128;       // texels per side
+export const SHADOW_LANDMASK_RESOLUTION = 256; // pre-rasterised land bitmap
+export const SHADOW_RAY_STEP = 4;           // metres per ray-cast step
+export const SHADOW_RECOVERY_LENGTH = 60;   // metres; e^(-d/L) recovery
+export const SHADOW_BLUR_RADIUS = 4;        // texels, perpendicular to wind
+export const CLIFF_RADIUS = 16;             // metres; cliff influence falloff
+export const CLIFF_CHOP_AMPLITUDE = 0.6;    // metres of standing-wave at peak
+export const WIND_ROTATE_STEP = Math.PI / 8; // 22.5° per keypress
+
 // Helicopter
 export const HELI_CRUISE_SPEED = 30;
 export const HELI_MAX_ALTITUDE = 100;
