@@ -203,8 +203,11 @@ export class WaveBlocksMesh {
 
 export interface LightingUniforms {
   readonly lightDir: THREE.Vector3;
-  readonly lightColor: THREE.Color;
-  readonly ambient: THREE.Color;
+  // Three.js's vec3 uniform setter reads .x/.y/.z, which Color objects don't
+  // expose — passing a Color uploads zeros and gives black output. Use
+  // Vector3 with rgb mapped to xyz.
+  readonly lightColor: THREE.Vector3;
+  readonly ambient: THREE.Vector3;
 }
 
 function spectrumDirsAsVec2Array(spectrum: WaveSpectrum): THREE.Vector2[] {

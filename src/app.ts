@@ -88,8 +88,9 @@ export class App {
 
     this.blocks = new WaveBlocksMesh(this.grid, spectrum, {
       lightDir: new THREE.Vector3(-0.5, -1.0, -0.3).normalize(),
-      lightColor: new THREE.Color(0xffffff).multiplyScalar(1.1),
-      ambient: new THREE.Color(0xb0d8ff).multiplyScalar(0.45),
+      lightColor: new THREE.Vector3(1.1, 1.1, 1.1),
+      // 0xb0d8ff × 0.45 in linear-ish srgb.
+      ambient: new THREE.Vector3(0xb0 / 255, 0xd8 / 255, 1.0).multiplyScalar(0.45),
     });
     this.scene.add(this.blocks.mesh);
 
