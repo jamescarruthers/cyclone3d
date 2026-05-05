@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import {
   DEFAULT_WORLD_SEED,
-  OCEAN_PLACEHOLDER_COLOUR,
   PHASE1_GRID_EXTENT,
   PHASE1_ISLAND_ANCHOR,
   WAVE_DIR_SPREAD,
@@ -21,10 +20,6 @@ import { WaveBlocksMesh } from '@/rendering/waveBlocksMesh';
 import { makeSpectrum } from '@/rendering/waveSpectrum';
 import { hashSeed } from '@/procgen/rng';
 
-// Far-field placeholder ocean for the area outside the test grid until
-// chunked streaming arrives in Phase 8.
-const FAR_OCEAN_SIZE = 8192;
-
 export class App {
   private readonly container: HTMLElement;
   private readonly renderer: THREE.WebGLRenderer;
@@ -33,7 +28,6 @@ export class App {
   private readonly heli = new Helicopter();
   private readonly controls = new HelicopterControls();
   private readonly hud: Hud;
-  private readonly farOcean: THREE.Mesh;
   private readonly blocks: WaveBlocksMesh;
   private readonly grid: Grid;
   private readonly islands: readonly Island[];
@@ -46,17 +40,6 @@ export class App {
     this.renderer = createRenderer(container);
     this.camera = new IsoCamera(container.clientWidth / container.clientHeight);
     this.hud = new Hud('hud');
-
-    const farGeom = new THREE.PlaneGeometry(FAR_OCEAN_SIZE, FAR_OCEAN_SIZE);
-    const farMat = new THREE.MeshStandardMaterial({
-      color: OCEAN_PLACEHOLDER_COLOUR,
-      roughness: 0.9,
-      metalness: 0.0,
-    });
-    this.farOcean = new THREE.Mesh(farGeom, farMat);
-    this.farOcean.rotation.x = -Math.PI / 2;
-    this.farOcean.position.y = -0.05;
-    this.scene.add(this.farOcean);
 
     this.islands = [
       makeIsland(PHASE1_ISLAND_ANCHOR[0], PHASE1_ISLAND_ANCHOR[1], DEFAULT_WORLD_SEED),
@@ -89,7 +72,6 @@ export class App {
     this.blocks = new WaveBlocksMesh(this.grid, spectrum, {
       lightDir: new THREE.Vector3(-0.5, -1.0, -0.3).normalize(),
       lightColor: new THREE.Vector3(1.1, 1.1, 1.1),
-      // 0xb0d8ff × 0.45 in linear-ish srgb.
       ambient: new THREE.Vector3(0xb0 / 255, 0xd8 / 255, 1.0).multiplyScalar(0.45),
     });
     this.scene.add(this.blocks.mesh);
@@ -117,8 +99,6 @@ export class App {
     window.removeEventListener('resize', this.onResize);
     this.blocks.dispose();
     this.heli.dispose();
-    this.farOcean.geometry.dispose();
-    (this.farOcean.material as THREE.Material).dispose();
     this.renderer.dispose();
   }
 
