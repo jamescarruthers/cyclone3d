@@ -5,7 +5,7 @@ export const SEA_LEVEL = 0;
 
 // World streaming
 export const CHUNK_SIZE = 256;
-export const CHUNKS_AHEAD = 3;
+export const CHUNKS_AHEAD = 1;
 export const CHUNKS_BEHIND = 1;
 
 // Wave grid
@@ -81,8 +81,8 @@ export const BLOCK_BASE_DEPTH = -65;
 export const SIDE_FACE_TINT = 0.7;
 
 // Phase 6 wave shadow / wave–island interaction
-export const SHADOW_RESOLUTION = 128;       // texels per side
-export const SHADOW_LANDMASK_RESOLUTION = 256; // pre-rasterised land bitmap
+export const SHADOW_RESOLUTION = 64;        // texels per side (per chunk)
+export const SHADOW_LANDMASK_RESOLUTION = 128; // pre-rasterised land bitmap
 export const SHADOW_RAY_STEP = 4;           // metres per ray-cast step
 export const SHADOW_RECOVERY_LENGTH = 60;   // metres; e^(-d/L) recovery
 export const SHADOW_BLUR_RADIUS = 4;        // texels, perpendicular to wind

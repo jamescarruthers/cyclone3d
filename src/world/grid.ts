@@ -63,6 +63,7 @@ export function buildGrid(
   islands: readonly Island[],
   bounds: GridBounds,
   worldSeed: number,
+  seedPoints?: Float64Array,
 ): Grid {
   const seed = hashSeed(worldSeed, 'grid', bounds.minX, bounds.minZ);
   const rng = new Rng(seed);
@@ -78,6 +79,7 @@ export function buildGrid(
     spacingFn,
     minSpacing: WAVE_CELL_SHORE,
     maxSpacing: WAVE_CELL_DEEP,
+    ...(seedPoints ? { seedPoints } : {}),
   });
 
   const initialDelaunay = new Delaunay(rawPoints);

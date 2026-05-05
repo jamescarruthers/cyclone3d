@@ -38,14 +38,15 @@ describe('world/shadowField', () => {
   });
 
   it('cliff intensity is non-zero near land', () => {
-    // Sample a ring of points around the island anchor; at least one should
-    // sit close enough to land to register cliff > 0.
+    // Sample many points around the island at varying radii; at least one
+    // shore-adjacent water texel should register cliff > 0.
     let maxCliff = 0;
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2;
-      const r = 70;
-      const c = field.cliffAt(Math.cos(a) * r, Math.sin(a) * r);
-      if (c > maxCliff) maxCliff = c;
+    for (let r = 60; r <= 120; r += 4) {
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        const c = field.cliffAt(Math.cos(a) * r, Math.sin(a) * r);
+        if (c > maxCliff) maxCliff = c;
+      }
     }
     expect(maxCliff).toBeGreaterThan(0);
   });
