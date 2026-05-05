@@ -1,9 +1,20 @@
 import * as THREE from 'three';
 import {
   BLOCK_BASE_DEPTH,
+  CAUSTIC_INTENSITY,
+  CAUSTIC_SCALE,
+  CAUSTIC_SPEED,
+  DEEP_TINT,
   DROPOFF_DEPTH,
+  FOAM_AMP_THRESHOLD,
+  FOAM_DEPTH_THRESHOLD,
+  FOAM_TINT,
+  MID_BAND,
+  MID_TINT,
   NUM_GERSTNER_WAVES,
   SEA_LEVEL,
+  SHALLOW_BAND,
+  SHALLOW_TINT,
   SIDE_FACE_TINT,
   WAVE_AMPLITUDE_DEEP,
   WAVE_AMPLITUDE_SHORE,
@@ -184,6 +195,17 @@ export class WaveBlocksMesh {
         uLightDir: { value: lighting.lightDir.clone() },
         uLightColor: { value: lighting.lightColor.clone() },
         uAmbient: { value: lighting.ambient.clone() },
+        uShallowTint: { value: tintVec3(SHALLOW_TINT) },
+        uMidTint: { value: tintVec3(MID_TINT) },
+        uDeepTint: { value: tintVec3(DEEP_TINT) },
+        uFoamTint: { value: tintVec3(FOAM_TINT) },
+        uShallowBand: { value: SHALLOW_BAND },
+        uMidBand: { value: MID_BAND },
+        uCausticScale: { value: CAUSTIC_SCALE },
+        uCausticSpeed: { value: CAUSTIC_SPEED },
+        uCausticIntensity: { value: CAUSTIC_INTENSITY },
+        uFoamAmpThreshold: { value: FOAM_AMP_THRESHOLD },
+        uFoamDepthThreshold: { value: FOAM_DEPTH_THRESHOLD },
       },
     });
 
@@ -216,4 +238,8 @@ function spectrumDirsAsVec2Array(spectrum: WaveSpectrum): THREE.Vector2[] {
     out.push(new THREE.Vector2(spectrum.directions[i * 2]!, spectrum.directions[i * 2 + 1]!));
   }
   return out;
+}
+
+function tintVec3(t: readonly [number, number, number]): THREE.Vector3 {
+  return new THREE.Vector3(t[0], t[1], t[2]);
 }

@@ -36,6 +36,19 @@ export const ABYSSAL_DEPTH = -60;
 export const SHALLOW_BAND = 5;
 export const MID_BAND = 25;
 
+// Phase 5 tints (linear-ish srgb)
+export const SHALLOW_TINT = [0.45, 0.85, 0.78] as const; // bright turquoise
+export const MID_TINT = [0.18, 0.55, 0.66] as const;     // teal
+export const DEEP_TINT = [0.06, 0.20, 0.42] as const;    // dark blue
+export const FOAM_TINT = [0.92, 0.97, 1.00] as const;    // off-white
+
+// Caustic projection on the shallow band (Phase 5)
+export const CAUSTIC_SCALE = 0.06;       // 1/m, lower = larger caustic cells
+export const CAUSTIC_SPEED = 0.6;        // animation speed multiplier
+export const CAUSTIC_INTENSITY = 0.45;   // peak additive whitening
+export const FOAM_AMP_THRESHOLD = 0.05;  // metres above sea level for foam onset
+export const FOAM_DEPTH_THRESHOLD = 1.5; // metres below sea level beyond which foam vanishes
+
 // Island distribution
 export const ISLAND_SPACING_MIN = 200;
 export const ISLAND_SPACING_AVG = 600;
