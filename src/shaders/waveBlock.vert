@@ -28,6 +28,8 @@ attribute vec3 aFaceNormal;
 varying vec3 vWorldPos;
 varying vec3 vColor;
 varying vec3 vNormal;
+varying float vWaveDepth;
+varying float vWaveY;
 
 float waveHeight(vec2 p, float cellSize, float depth) {
     float ampMod = mix(
@@ -66,6 +68,8 @@ void main() {
     vWorldPos = worldPos;
     vColor = color;
     vNormal = aFaceNormal;
+    vWaveDepth = aWaveDepth;
+    vWaveY = y;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
 }

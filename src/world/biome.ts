@@ -1,4 +1,13 @@
-import { DROPOFF_DEPTH, SHELF_DEPTH } from '@/config';
+import {
+  DEEP_TINT,
+  DROPOFF_DEPTH,
+  MID_BAND,
+  MID_TINT,
+  SHALLOW_BAND,
+  SHALLOW_TINT,
+  SHELF_DEPTH,
+} from '@/config';
+import { lerp, smoothstep } from '@/utils/math';
 
 // Per SPEC §heightfield tag classification. Phase 1 only uses height to pick
 // a colour band; later phases will incorporate slope and per-cell tags
@@ -23,14 +32,31 @@ export function bandFromHeight(h: number): Band {
   return Band.Deep;
 }
 
-// Stylised palette for Phase 1. Phase 5 replaces water bands with a proper
-// shader; these are placeholders to verify the heightfield reads correctly.
+// Land-side palette for Phase 5+. Water bands are computed in the fragment
+// shader from depth (see waterTintSmooth). Underwater entries here are
+// placeholders that the shader overrides.
 export const BAND_COLOUR: Readonly<Record<Band, readonly [number, number, number]>> = {
   [Band.Peak]: [0.55, 0.5, 0.45],
   [Band.Land]: [0.36, 0.6, 0.32],
   [Band.Beach]: [0.93, 0.88, 0.66],
-  [Band.ShelfShallow]: [0.45, 0.85, 0.78],
-  [Band.ShelfMid]: [0.18, 0.55, 0.66],
-  [Band.Dropoff]: [0.1, 0.32, 0.5],
-  [Band.Deep]: [0.05, 0.18, 0.36],
+  [Band.ShelfShallow]: SHALLOW_TINT,
+  [Band.ShelfMid]: MID_TINT,
+  [Band.Dropoff]: DEEP_TINT,
+  [Band.Deep]: DEEP_TINT,
 };
+
+// Pure-JS mirror of the fragment shader's water-band selection. Smoothsteps
+// SHALLOW → MID across ±1 m of SHALLOW_BAND, then MID → DEEP across ±5 m of
+// MID_BAND.
+export function waterTintSmooth(depth: number): [number, number, number] {
+  const t1 = smoothstep(SHALLOW_BAND - 1, SHALLOW_BAND + 1, depth);
+  const t2 = smoothstep(MID_BAND - 5, MID_BAND + 5, depth);
+  const r1 = lerp(SHALLOW_TINT[0], MID_TINT[0], t1);
+  const g1 = lerp(SHALLOW_TINT[1], MID_TINT[1], t1);
+  const b1 = lerp(SHALLOW_TINT[2], MID_TINT[2], t1);
+  return [
+    lerp(r1, DEEP_TINT[0], t2),
+    lerp(g1, DEEP_TINT[1], t2),
+    lerp(b1, DEEP_TINT[2], t2),
+  ];
+}
