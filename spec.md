@@ -33,7 +33,7 @@ All in metres. +Y up. Sea level at y = 0.
 | Chunk size | 256 m × 256 m |
 | Wave grid cell — deep ocean | 6 m |
 | Wave grid cell — shore | 1.5 m |
-| Wave height step (quantisation) | cell_size × 0.5 |
+| Wave height step (quantisation) | cell_size × 0.1 |
 | Max island peak | 80 m |
 | Beach band | 0 to +1 m |
 | Shelf band (underwater extension) | 0 to −6 m |
@@ -112,9 +112,9 @@ export const CHUNKS_BEHIND = 1;
 
 export const WAVE_CELL_DEEP = 6;
 export const WAVE_CELL_SHORE = 1.5;
-export const WAVE_AMPLITUDE_DEEP = 1.5;
-export const WAVE_AMPLITUDE_SHORE = 0.1;
-export const WAVE_STEP_RATIO = 0.5;
+export const WAVE_AMPLITUDE_DEEP = 2.0;
+export const WAVE_AMPLITUDE_SHORE = 0.25;
+export const WAVE_STEP_RATIO = 0.1;
 export const NUM_GERSTNER_WAVES = 8;
 export const WIND_DIRECTION = [1, 0]; // unit vector in XZ
 
