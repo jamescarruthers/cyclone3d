@@ -33,7 +33,12 @@ export class ShadowField {
   private readonly landMaskRes: number;
   private readonly shadowRaw: Float32Array;
   private readonly shadowBlurred: Float32Array;
-  private readonly textureData: Float32Array;
+  // Backing data for the texture is unsigned-byte RGBA. Using FloatType
+  // requires OES_texture_float_linear, which isn't guaranteed; UnsignedByte
+  // is universally supported and matches SPEC §Shadow field's "R8 texture".
+  private readonly textureData: Uint8Array;
+  // Float mirrors used during compute, then quantised to bytes for upload.
+  private readonly cliffFloat: Float32Array;
   private windAngle = 0;
 
   constructor(
@@ -70,14 +75,15 @@ export class ShadowField {
 
     this.shadowRaw = new Float32Array(this.resolution * this.resolution);
     this.shadowBlurred = new Float32Array(this.resolution * this.resolution);
-    this.textureData = new Float32Array(this.resolution * this.resolution * 4);
+    this.cliffFloat = new Float32Array(this.resolution * this.resolution);
+    this.textureData = new Uint8Array(this.resolution * this.resolution * 4);
 
     this.texture = new THREE.DataTexture(
-      this.textureData as unknown as Float32Array<ArrayBuffer>,
+      this.textureData as unknown as Uint8Array<ArrayBuffer>,
       this.resolution,
       this.resolution,
       THREE.RGBAFormat,
-      THREE.FloatType,
+      THREE.UnsignedByteType,
     );
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
@@ -135,7 +141,7 @@ export class ShadowField {
     if (u < 0 || u >= 1 || v < 0 || v >= 1) return 1;
     const i = Math.min(this.resolution - 1, Math.floor(u * this.resolution));
     const j = Math.min(this.resolution - 1, Math.floor(v * this.resolution));
-    return this.textureData[(j * this.resolution + i) * 4 + channel]!;
+    return this.textureData[(j * this.resolution + i) * 4 + channel]! / 255;
   }
 
   private computeShadow(windX: number, windZ: number): void {
@@ -235,15 +241,20 @@ export class ShadowField {
           }
           if (minDist < CLIFF_RADIUS) cliff = 1 - minDist / CLIFF_RADIUS;
         }
-        this.textureData[(j * this.resolution + i) * 4 + 1] = cliff;
+        this.cliffFloat[j * this.resolution + i] = cliff;
+        this.textureData[(j * this.resolution + i) * 4 + 1] = Math.round(cliff * 255);
       }
     }
   }
 
   private uploadShadow(): void {
-    // R channel = shadow. G already populated (cliff). B/A unused.
+    // R = shadow (quantised to 0..255), G = cliff (already set), B/A = 255.
     for (let i = 0; i < this.shadowBlurred.length; i++) {
-      this.textureData[i * 4] = this.shadowBlurred[i]!;
+      const o = i * 4;
+      this.textureData[o] = Math.max(0, Math.min(255, Math.round(this.shadowBlurred[i]! * 255)));
+      // Cliff stays put.
+      this.textureData[o + 2] = 0;
+      this.textureData[o + 3] = 255;
     }
     this.texture.needsUpdate = true;
   }

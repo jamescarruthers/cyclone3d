@@ -41,7 +41,10 @@ varying float vWaveY;
 vec2 sampleShadowField(vec2 p) {
     vec2 uv = (p - uShadowBounds.xy) / uShadowBounds.zw;
     uv = clamp(uv, 0.0, 1.0);
-    return texture2DLod(uShadowMap, uv, 0.0).rg;
+    // Use textureLod directly (GLSL3 builtin). Three.js's GLSL3 auto-conversion
+    // injects `texture2DLod → textureLod` only in the fragment shader prefix,
+    // not the vertex one — so writing texture2DLod here would fail to compile.
+    return textureLod(uShadowMap, uv, 0.0).rg;
 }
 
 float waveHeight(vec2 p, float cellSize, float depth) {
