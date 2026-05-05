@@ -49,9 +49,11 @@ void main() {
     float NdotL = abs(dot(N, -normalize(uLightDir)));
 
     vec3 base;
+    float diffuse;
     if (vWaveDepth > 0.0) {
-        // Land vertex: use the per-cell tag colour.
+        // Land vertex: full directional shading for terrain definition.
         base = vColor;
+        diffuse = NdotL;
     } else {
         float depth = -vWaveDepth;
         base = waterTint(depth);
@@ -69,8 +71,13 @@ void main() {
         float foamFromDepth = 1.0 - smoothstep(0.0, uFoamDepthThreshold, depth);
         float foam = foamFromY * foamFromDepth;
         base = mix(base, uFoamTint, clamp(foam * 0.85, 0.0, 1.0));
+
+        // Soften directional lighting on water so cell side walls don't
+        // appear as dark outlines around every cell. Floor at 0.7 keeps
+        // some top/side contrast for shape readability.
+        diffuse = max(NdotL, 0.7);
     }
 
-    vec3 lit = base * (uAmbient + uLightColor * NdotL);
+    vec3 lit = base * (uAmbient + uLightColor * diffuse);
     gl_FragColor = vec4(lit, 1.0);
 }
