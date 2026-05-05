@@ -1,12 +1,23 @@
 import * as THREE from 'three';
-import { OCEAN_PLACEHOLDER_COLOUR } from '@/config';
+import {
+  DEFAULT_WORLD_SEED,
+  OCEAN_PLACEHOLDER_COLOUR,
+  PHASE1_GRID_EXTENT,
+  PHASE1_GRID_RESOLUTION,
+  PHASE1_ISLAND_ANCHOR,
+} from '@/config';
 import { createRenderer } from '@/rendering/renderer';
 import { IsoCamera } from '@/rendering/camera';
 import { Helicopter } from '@/entities/helicopter';
 import { HelicopterControls } from '@/entities/helicopterControls';
 import { Hud } from '@/hud';
+import { LandMesh } from '@/rendering/landMesh';
+import { makeIsland, type Island } from '@/world/heightfield';
 
-const PLANE_SIZE = 4096;
+// Far-field placeholder ocean. The island mesh covers PHASE1_GRID_EXTENT
+// around the origin; this plane fills the rest of the visible area until
+// chunked streaming arrives in Phase 8.
+const FAR_OCEAN_SIZE = 8192;
 
 export class App {
   private readonly container: HTMLElement;
@@ -16,7 +27,9 @@ export class App {
   private readonly heli = new Helicopter();
   private readonly controls = new HelicopterControls();
   private readonly hud: Hud;
-  private readonly plane: THREE.Mesh;
+  private readonly farOcean: THREE.Mesh;
+  private readonly land: LandMesh;
+  private readonly islands: readonly Island[];
   private lastT = 0;
   private rafId = 0;
 
@@ -26,15 +39,25 @@ export class App {
     this.camera = new IsoCamera(container.clientWidth / container.clientHeight);
     this.hud = new Hud('hud');
 
-    const planeGeom = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE);
-    const planeMat = new THREE.MeshStandardMaterial({
+    const farGeom = new THREE.PlaneGeometry(FAR_OCEAN_SIZE, FAR_OCEAN_SIZE);
+    const farMat = new THREE.MeshStandardMaterial({
       color: OCEAN_PLACEHOLDER_COLOUR,
       roughness: 0.9,
       metalness: 0.0,
     });
-    this.plane = new THREE.Mesh(planeGeom, planeMat);
-    this.plane.rotation.x = -Math.PI / 2;
-    this.scene.add(this.plane);
+    this.farOcean = new THREE.Mesh(farGeom, farMat);
+    this.farOcean.rotation.x = -Math.PI / 2;
+    this.farOcean.position.y = -0.05; // sit just under the island mesh to avoid z-fight
+    this.scene.add(this.farOcean);
+
+    this.islands = [
+      makeIsland(PHASE1_ISLAND_ANCHOR[0], PHASE1_ISLAND_ANCHOR[1], DEFAULT_WORLD_SEED),
+    ];
+    this.land = new LandMesh(this.islands, {
+      extent: PHASE1_GRID_EXTENT,
+      resolution: PHASE1_GRID_RESOLUTION,
+    });
+    this.scene.add(this.land.mesh);
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.1);
     sun.position.set(60, 120, 40);
@@ -62,6 +85,11 @@ export class App {
     cancelAnimationFrame(this.rafId);
     this.controls.detach(window);
     window.removeEventListener('resize', this.onResize);
+    this.land.dispose();
+    this.heli.dispose();
+    this.farOcean.geometry.dispose();
+    (this.farOcean.material as THREE.Material).dispose();
+    this.renderer.dispose();
   }
 
   private update(dt: number): void {

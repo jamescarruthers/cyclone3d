@@ -30,6 +30,28 @@ export const MID_BAND = 25;
 export const ISLAND_SPACING_MIN = 200;
 export const ISLAND_SPACING_AVG = 600;
 
+// Per-island profile radii (metres from anchor), used by world/heightfield.ts.
+// These are defaults; later phases will let archetypes override per-island.
+export const ISLAND_R_PEAK = 35;
+export const ISLAND_R_BEACH = 75;
+export const ISLAND_R_SHELF = 130;
+export const ISLAND_R_DROPOFF = 195;
+export const ISLAND_PEAK_HEIGHT = 70;
+export const ISLAND_DOMAIN_WARP_SCALE = 0.012;
+export const ISLAND_DOMAIN_WARP_AMPLITUDE = 28;
+export const ISLAND_PEAK_NOISE_SCALE = 0.04;
+export const ISLAND_SANDBAR_NOISE_SCALE = 0.025;
+export const ISLAND_SANDBAR_AMPLITUDE = 1.2;
+
+// World seed (Phase 8 will key chunks off this; for Phase 1 it seeds the one
+// hand-placed island).
+export const DEFAULT_WORLD_SEED = 0x5a17e1;
+
+// Phase 1 single-island test mesh
+export const PHASE1_GRID_EXTENT = 1024; // metres covered by the test mesh
+export const PHASE1_GRID_RESOLUTION = 4; // metres per quad
+export const PHASE1_ISLAND_ANCHOR = [0, 0] as const;
+
 // Helicopter
 export const HELI_CRUISE_SPEED = 30;
 export const HELI_MAX_ALTITUDE = 100;
