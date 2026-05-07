@@ -57,7 +57,7 @@ export class Chunk {
     this.shadow = new ShadowField(this.islands, this.bounds, initialWind);
     this.mesh.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
 
-    const instances = scatterForChunk(this.islands, worldSeed, cx, cz);
+    const instances = scatterForChunk(this.grid, worldSeed, cx, cz);
     this.scatter = new ScatterMesh(instances);
   }
 

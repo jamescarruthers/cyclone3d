@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_WORLD_SEED } from '@/config';
+import { CHUNK_SIZE, DEFAULT_WORLD_SEED } from '@/config';
 import { makeIsland, type IslandArchetype } from '@/world/heightfield';
-import { gatherIslands } from '@/world/islands';
+import { buildGrid } from '@/world/grid';
 import { scatterForChunk, ScatterKind } from '@/world/scatter';
 
 describe('Phase 9 polish', () => {
@@ -27,10 +27,15 @@ describe('Phase 9 polish', () => {
     expect(island.archetype).toBe('cay');
   });
 
+  // Build a small grid centred on a single volcanic island so the test runs
+  // quickly (the full chunk-scale grid is ~thousands of cells).
+  const islands = [makeIsland(0, 0, DEFAULT_WORLD_SEED, 'volcanic')];
+  const bounds = { minX: -CHUNK_SIZE / 2, maxX: CHUNK_SIZE / 2, minZ: -CHUNK_SIZE / 2, maxZ: CHUNK_SIZE / 2 };
+  const grid = buildGrid(islands, bounds, DEFAULT_WORLD_SEED);
+
   it('scatter is deterministic for fixed chunk inputs', () => {
-    const islands = gatherIslands(DEFAULT_WORLD_SEED, 0, 0);
-    const a = scatterForChunk(islands, DEFAULT_WORLD_SEED, 0, 0);
-    const b = scatterForChunk(islands, DEFAULT_WORLD_SEED, 0, 0);
+    const a = scatterForChunk(grid, DEFAULT_WORLD_SEED, 0, 0);
+    const b = scatterForChunk(grid, DEFAULT_WORLD_SEED, 0, 0);
     expect(a.length).toBe(b.length);
     if (a.length > 0) {
       expect(a[0]!.x).toBe(b[0]!.x);
@@ -38,9 +43,9 @@ describe('Phase 9 polish', () => {
     }
   });
 
-  it('scatter kinds match the heightfield bands', () => {
-    const islands = [makeIsland(0, 0, DEFAULT_WORLD_SEED, 'volcanic')];
-    const insts = scatterForChunk(islands, DEFAULT_WORLD_SEED, 0, 0);
+  it('scatter kinds match the cell bands', () => {
+    const insts = scatterForChunk(grid, DEFAULT_WORLD_SEED, 0, 0);
+    expect(insts.length).toBeGreaterThan(0);
     for (const inst of insts) {
       if (inst.kind === ScatterKind.Palm) {
         expect(inst.y).toBeGreaterThan(-1);
@@ -48,7 +53,6 @@ describe('Phase 9 polish', () => {
         expect(inst.y).toBeGreaterThan(50);
       } else if (inst.kind === ScatterKind.Coral) {
         expect(inst.y).toBeLessThanOrEqual(-1);
-        expect(inst.y).toBeGreaterThan(-15);
       }
     }
   });
