@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_WORLD_SEED,
-  PHASE1_GRID_EXTENT,
   PHASE1_ISLAND_ANCHOR,
 } from '@/config';
 import { makeIsland } from '@/world/heightfield';
 import { ShadowField } from '@/world/shadowField';
 
-const half = PHASE1_GRID_EXTENT / 2;
+// Chunk-scale bounds, matching Phase 8+ runtime. The shadow landmask
+// resolution is sized for this scale, so cliff/shadow features still
+// resolve at expected sample radii.
+const half = 200;
 const islands = [
   // Phase 9 picks an archetype per island deterministically; force volcanic
   // here so the shadow + cliff radii match this test's hard-coded sample
@@ -22,8 +24,8 @@ describe('world/shadowField', () => {
   const field = new ShadowField(islands, bounds, wind);
 
   it('shadow approaches 1 far upwind of any island', () => {
-    // Far west of the island, the upwind ray walks west and hits no land.
-    const farUpwind = field.shadowAt(-400, 0);
+    // West edge of the chunk; the upwind ray walks west and exits the chunk.
+    const farUpwind = field.shadowAt(-180, 0);
     expect(farUpwind).toBeGreaterThan(0.9);
   });
 
@@ -36,7 +38,7 @@ describe('world/shadowField', () => {
 
   it('shadow recovers further downwind', () => {
     const near = field.shadowAt(120, 0);
-    const far = field.shadowAt(450, 0);
+    const far = field.shadowAt(180, 0);
     expect(far).toBeGreaterThan(near);
   });
 
@@ -55,7 +57,8 @@ describe('world/shadowField', () => {
   });
 
   it('cliff intensity is zero deep in open ocean', () => {
-    expect(field.cliffAt(450, 450)).toBe(0);
+    // In-bounds but well past the island's dropoff.
+    expect(field.cliffAt(180, 180)).toBe(0);
   });
 
   it('rotating wind changes the lee location', () => {

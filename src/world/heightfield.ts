@@ -103,6 +103,12 @@ export function islandHeight(island: Island, x: number, z: number): number {
   const dz = z - island.anchorZ;
   const dRaw = Math.sqrt(dx * dx + dz * dz);
 
+  // Cheap early-out for points well outside this island's influence ring.
+  // Saves ~30us of noise sampling per call — critical for the shadow
+  // landmask (16k samples × N islands per chunk).
+  const reach = island.profile.rDropoff + ISLAND_DOMAIN_WARP_AMPLITUDE * 1.5;
+  if (dRaw > reach) return ABYSSAL_DEPTH;
+
   domainWarp2(
     island.warpNoiseX,
     island.warpNoiseY,
