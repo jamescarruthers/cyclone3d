@@ -48,17 +48,35 @@ export class Chunk {
       maxZ: minZ + CHUNK_SIZE,
     };
 
+    const t0 = performance.now();
     this.islands = gatherIslands(worldSeed, cx, cz);
+    const t1 = performance.now();
 
     const seedPoints = chunkSeedPoints(worldSeed, cx, cz);
     this.grid = buildGrid(this.islands, this.bounds, worldSeed, seedPoints);
+    const t2 = performance.now();
 
     this.mesh = new WaveBlocksMesh(this.grid, spectrum, lighting);
+    const t3 = performance.now();
+
     this.shadow = new ShadowField(this.islands, this.bounds, initialWind);
     this.mesh.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
+    const t4 = performance.now();
 
     const instances = scatterForChunk(this.grid, worldSeed, cx, cz);
     this.scatter = new ScatterMesh(instances);
+    const t5 = performance.now();
+
+    // eslint-disable-next-line no-console
+    console.info(
+      `[chunk ${cx},${cz}] ` +
+      `islands=${(t1 - t0).toFixed(0)} ` +
+      `grid=${(t2 - t1).toFixed(0)} (${this.grid.cellCount}) ` +
+      `mesh=${(t3 - t2).toFixed(0)} ` +
+      `shadow=${(t4 - t3).toFixed(0)} ` +
+      `scatter=${(t5 - t4).toFixed(0)} (${instances.length}) ` +
+      `total=${(t5 - t0).toFixed(0)}ms`,
+    );
   }
 
   dispose(): void {
