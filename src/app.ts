@@ -83,6 +83,14 @@ export class App {
     this.spray = new Spray(hashSeed(DEFAULT_WORLD_SEED, 'spray'));
     this.scene.add(this.spray.points);
 
+    // Scene lights for the helicopter and the per-chunk vegetation /
+    // coral InstancedMeshes (the wave-blocks shader has its own custom
+    // light uniforms and ignores the scene lights).
+    const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+    sun.position.set(60, 120, 40);
+    this.scene.add(sun);
+    this.scene.add(new THREE.AmbientLight(0xb0d8ff, 0.55));
+
     this.scene.add(this.heli.mesh);
   }
 

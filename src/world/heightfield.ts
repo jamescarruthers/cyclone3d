@@ -18,8 +18,8 @@ import { hashSeed } from '@/procgen/rng';
 import { domainWarp2, fbm2, ridged2, makeNoise2D } from '@/procgen/noise';
 import { lerp, smoothstep } from '@/utils/math';
 
-// Per-island profile parameters. Defaults come from config; archetypes can
-// override these when Phase 9 adds variation.
+// Per-island profile parameters. Phase 9 picks one of three archetype
+// presets per island for visual variety.
 export interface IslandProfile {
   readonly rPeak: number;
   readonly rBeach: number;
@@ -27,6 +27,8 @@ export interface IslandProfile {
   readonly rDropoff: number;
   readonly peakHeight: number;
 }
+
+export type IslandArchetype = 'volcanic' | 'atoll' | 'cay';
 
 export const DEFAULT_PROFILE: IslandProfile = {
   rPeak: ISLAND_R_PEAK,
@@ -36,12 +38,33 @@ export const DEFAULT_PROFILE: IslandProfile = {
   peakHeight: ISLAND_PEAK_HEIGHT,
 };
 
+const ARCHETYPE_PROFILES: Readonly<Record<IslandArchetype, IslandProfile>> = {
+  // Tall, ridged. Standard SPEC profile.
+  volcanic: DEFAULT_PROFILE,
+  // Wide, very low — barely above sea level. Dominant beach band.
+  atoll: { rPeak: 18, rBeach: 95, rShelf: 145, rDropoff: 200, peakHeight: 6 },
+  // Tiny, flat sand cay.
+  cay: { rPeak: 6, rBeach: 28, rShelf: 90, rDropoff: 150, peakHeight: 3 },
+};
+
+function pickArchetype(seed: number): IslandArchetype {
+  // mulberry32-style mix; 50% volcanic, 30% cay, 20% atoll.
+  let s = seed | 0;
+  s = (s + 0x6d2b79f5) | 0;
+  s = Math.imul(s ^ (s >>> 15), s | 1);
+  s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
+  const r = ((s ^ (s >>> 14)) >>> 0) / 0x100000000;
+  if (r < 0.5) return 'volcanic';
+  if (r < 0.8) return 'cay';
+  return 'atoll';
+}
+
 export interface Island {
   readonly anchorX: number;
   readonly anchorZ: number;
   readonly seed: number;
+  readonly archetype: IslandArchetype;
   readonly profile: IslandProfile;
-  // Pre-built noise functions, deterministic from seed.
   readonly peakNoise: NoiseFunction2D;
   readonly warpNoiseX: NoiseFunction2D;
   readonly warpNoiseY: NoiseFunction2D;
@@ -52,13 +75,16 @@ export function makeIsland(
   anchorX: number,
   anchorZ: number,
   worldSeed: number,
-  profile: IslandProfile = DEFAULT_PROFILE,
+  archetypeOverride?: IslandArchetype,
 ): Island {
   const baseSeed = hashSeed(worldSeed, 'island', anchorX, anchorZ);
+  const archetype = archetypeOverride ?? pickArchetype(hashSeed(baseSeed, 'archetype'));
+  const profile = ARCHETYPE_PROFILES[archetype];
   return {
     anchorX,
     anchorZ,
     seed: baseSeed,
+    archetype,
     profile,
     peakNoise: makeNoise2D(hashSeed(baseSeed, 'peak')),
     warpNoiseX: makeNoise2D(hashSeed(baseSeed, 'warpX')),

@@ -59,6 +59,7 @@ export class ChunkManager {
     for (const [k, chunk] of this.chunks) {
       if (Math.abs(chunk.cx - cx) > keepRadius || Math.abs(chunk.cz - cz) > keepRadius) {
         this.scene.remove(chunk.mesh.mesh);
+        this.scene.remove(chunk.scatter.group);
         chunk.dispose();
         this.chunks.delete(k);
       }
@@ -110,21 +111,29 @@ export class ChunkManager {
   dispose(): void {
     for (const chunk of this.chunks.values()) {
       this.scene.remove(chunk.mesh.mesh);
+      this.scene.remove(chunk.scatter.group);
       chunk.dispose();
     }
     this.chunks.clear();
   }
 
   private loadChunk(cx: number, cz: number): void {
-    const chunk = new Chunk(
-      this.worldSeed,
-      cx,
-      cz,
-      this.spectrum,
-      this.lighting,
-      this.windDir,
-    );
-    this.chunks.set(chunkKey(cx, cz), chunk);
-    this.scene.add(chunk.mesh.mesh);
+    try {
+      const chunk = new Chunk(
+        this.worldSeed,
+        cx,
+        cz,
+        this.spectrum,
+        this.lighting,
+        this.windDir,
+      );
+      this.chunks.set(chunkKey(cx, cz), chunk);
+      this.scene.add(chunk.mesh.mesh);
+      this.scene.add(chunk.scatter.group);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[chunks] failed to load (${cx}, ${cz}):`, err);
+      throw err;
+    }
   }
 }
