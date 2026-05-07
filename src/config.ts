@@ -102,6 +102,13 @@ export const SPRAY_SPAWN_RATE = 200;        // particles per second when active
 export const SPRAY_PARTICLE_SIZE = 0.45;    // metres
 export const SPRAY_PARTICLE_LIFE = 1.0;     // seconds, ±0.3 jitter
 
+// Phase 9 polish: per-island archetypes + vegetation/coral scatter
+export const SCATTER_MIN_SPACING = 2;       // metres between any two scattered objects
+export const SCATTER_MAX_SPACING = 5;       // metres; deep-water cells use this
+export const SCATTER_PALM_PER_CHUNK_MAX = 600;
+export const SCATTER_ROCK_PER_CHUNK_MAX = 200;
+export const SCATTER_CORAL_PER_CHUNK_MAX = 800;
+
 // Helicopter
 export const HELI_CRUISE_SPEED = 30;
 export const HELI_MAX_ALTITUDE = 100;

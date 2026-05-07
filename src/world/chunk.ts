@@ -4,12 +4,14 @@ import {
   chunkSeedPoints,
   gatherIslands,
 } from '@/world/islands';
+import { scatterForChunk } from '@/world/scatter';
 import { ShadowField } from '@/world/shadowField';
 import type { Island } from '@/world/heightfield';
 import {
   WaveBlocksMesh,
   type LightingUniforms,
 } from '@/rendering/waveBlocksMesh';
+import { ScatterMesh } from '@/rendering/scatterMesh';
 import type { WaveSpectrum } from '@/rendering/waveSpectrum';
 
 // One streamable world tile. Holds its own grid, prism mesh, and shadow
@@ -25,6 +27,7 @@ export class Chunk {
   readonly islands: readonly Island[];
   readonly mesh: WaveBlocksMesh;
   readonly shadow: ShadowField;
+  readonly scatter: ScatterMesh;
 
   constructor(
     worldSeed: number,
@@ -53,10 +56,14 @@ export class Chunk {
     this.mesh = new WaveBlocksMesh(this.grid, spectrum, lighting);
     this.shadow = new ShadowField(this.islands, this.bounds, initialWind);
     this.mesh.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
+
+    const instances = scatterForChunk(this.islands, worldSeed, cx, cz);
+    this.scatter = new ScatterMesh(instances);
   }
 
   dispose(): void {
     this.mesh.dispose();
     this.shadow.dispose();
+    this.scatter.dispose();
   }
 }

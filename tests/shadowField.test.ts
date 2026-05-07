@@ -9,7 +9,10 @@ import { ShadowField } from '@/world/shadowField';
 
 const half = PHASE1_GRID_EXTENT / 2;
 const islands = [
-  makeIsland(PHASE1_ISLAND_ANCHOR[0], PHASE1_ISLAND_ANCHOR[1], DEFAULT_WORLD_SEED),
+  // Phase 9 picks an archetype per island deterministically; force volcanic
+  // here so the shadow + cliff radii match this test's hard-coded sample
+  // points.
+  makeIsland(PHASE1_ISLAND_ANCHOR[0], PHASE1_ISLAND_ANCHOR[1], DEFAULT_WORLD_SEED, 'volcanic'),
 ];
 const bounds = { minX: -half, maxX: half, minZ: -half, maxZ: half };
 
