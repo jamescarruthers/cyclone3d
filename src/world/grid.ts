@@ -64,12 +64,16 @@ export function buildGrid(
   bounds: GridBounds,
   worldSeed: number,
   seedPoints?: Float64Array,
+  // Optional fast height sampler. Defaults to the raw heightfield evaluator;
+  // chunk init passes a HeightCache.sample to avoid hundreds of thousands of
+  // noise-stack invocations during grid build.
+  sampleHeight?: (x: number, z: number) => number,
 ): Grid {
   const seed = hashSeed(worldSeed, 'grid', bounds.minX, bounds.minZ);
   const rng = new Rng(seed);
 
-  const spacingFn = (x: number, y: number): number =>
-    spacingForDepth(height(islands, x, y));
+  const sample = sampleHeight ?? ((x: number, z: number): number => height(islands, x, z));
+  const spacingFn = (x: number, y: number): number => spacingForDepth(sample(x, y));
 
   const rawPoints = bridsonVariable(rng, {
     minX: bounds.minX,
@@ -116,7 +120,7 @@ export function buildGrid(
     const mz = (az + bz + cz + dz) * 0.25;
     cellCentre[ci * 2] = mx;
     cellCentre[ci * 2 + 1] = mz;
-    cellHeight[ci] = height(islands, mx, mz);
+    cellHeight[ci] = sample(mx, mz);
     cellSize[ci] = longestEdge4(ax, az, bx, bz, cx, cz, dx, dz);
     cellTag[ci] = bandFromHeight(cellHeight[ci]!);
     ci++;
@@ -132,7 +136,7 @@ export function buildGrid(
     const mz = (az + bz + cz) / 3;
     cellCentre[ci * 2] = mx;
     cellCentre[ci * 2 + 1] = mz;
-    cellHeight[ci] = height(islands, mx, mz);
+    cellHeight[ci] = sample(mx, mz);
     cellSize[ci] = longestEdge3(ax, az, bx, bz, cx, cz);
     cellTag[ci] = bandFromHeight(cellHeight[ci]!);
     ci++;

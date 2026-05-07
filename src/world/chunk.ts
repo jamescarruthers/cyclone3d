@@ -1,5 +1,6 @@
-import { CHUNK_SIZE } from '@/config';
+import { CHUNK_SIZE, SHADOW_LANDMASK_RESOLUTION } from '@/config';
 import { buildGrid, type Grid, type GridBounds } from '@/world/grid';
+import { HeightCache } from '@/world/heightCache';
 import {
   chunkSeedPoints,
   gatherIslands,
@@ -52,14 +53,20 @@ export class Chunk {
     this.islands = gatherIslands(worldSeed, cx, cz);
     const t1 = performance.now();
 
+    // One-shot height cache: amortises the expensive noise-stack heightfield
+    // across the many lookups Bridson + cell-tagging + shadow landmask need.
+    const cache = new HeightCache(this.islands, this.bounds, SHADOW_LANDMASK_RESOLUTION);
+    const sampleHeight = (x: number, z: number): number => cache.sample(x, z);
+    const tCache = performance.now();
+
     const seedPoints = chunkSeedPoints(worldSeed, cx, cz);
-    this.grid = buildGrid(this.islands, this.bounds, worldSeed, seedPoints);
+    this.grid = buildGrid(this.islands, this.bounds, worldSeed, seedPoints, sampleHeight);
     const t2 = performance.now();
 
     this.mesh = new WaveBlocksMesh(this.grid, spectrum, lighting);
     const t3 = performance.now();
 
-    this.shadow = new ShadowField(this.islands, this.bounds, initialWind);
+    this.shadow = new ShadowField(this.islands, this.bounds, initialWind, sampleHeight);
     this.mesh.setShadowField(this.shadow.texture, this.shadow.boundsUniform);
     const t4 = performance.now();
 
@@ -71,7 +78,8 @@ export class Chunk {
     console.info(
       `[chunk ${cx},${cz}] ` +
       `islands=${(t1 - t0).toFixed(0)} ` +
-      `grid=${(t2 - t1).toFixed(0)} (${this.grid.cellCount}) ` +
+      `cache=${(tCache - t1).toFixed(0)} ` +
+      `grid=${(t2 - tCache).toFixed(0)} (${this.grid.cellCount}) ` +
       `mesh=${(t3 - t2).toFixed(0)} ` +
       `shadow=${(t4 - t3).toFixed(0)} ` +
       `scatter=${(t5 - t4).toFixed(0)} (${instances.length}) ` +

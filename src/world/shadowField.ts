@@ -28,7 +28,6 @@ export class ShadowField {
   // (minX, minZ, sizeX, sizeZ) — uploaded as a vec4 uniform for UV mapping.
   readonly boundsUniform: THREE.Vector4;
 
-  private readonly islands: readonly Island[];
   private readonly landMask: Uint8Array;
   private readonly landMaskRes: number;
   private readonly shadowRaw: Float32Array;
@@ -45,11 +44,14 @@ export class ShadowField {
     islands: readonly Island[],
     bounds: GridBounds,
     initialWind: readonly [number, number],
+    // Optional fast height sampler — Phase 8+ chunks pass a HeightCache.sample
+    // to avoid LANDMASK_RESOLUTION² noise-stack heightfield calls per chunk.
+    sampleHeight?: (x: number, z: number) => number,
   ) {
-    this.islands = islands;
     this.bounds = bounds;
     this.resolution = SHADOW_RESOLUTION;
     this.landMaskRes = SHADOW_LANDMASK_RESOLUTION;
+    const sample = sampleHeight ?? ((x: number, z: number): number => height(islands, x, z));
 
     this.boundsUniform = new THREE.Vector4(
       bounds.minX,
@@ -69,7 +71,7 @@ export class ShadowField {
       const z = bounds.minZ + (j + 0.5) * dz;
       for (let i = 0; i < this.landMaskRes; i++) {
         const x = bounds.minX + (i + 0.5) * dx;
-        this.landMask[j * this.landMaskRes + i] = height(this.islands, x, z) > 0 ? 1 : 0;
+        this.landMask[j * this.landMaskRes + i] = sample(x, z) > 0 ? 1 : 0;
       }
     }
 
