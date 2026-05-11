@@ -9,10 +9,14 @@ export const CHUNKS_AHEAD = 1;
 export const CHUNKS_BEHIND = 1;
 
 // Wave grid
-export const WAVE_CELL_DEEP = 6;
-export const WAVE_CELL_SHORE = 1.5;
-export const WAVE_AMPLITUDE_DEEP = 2.0;
-export const WAVE_AMPLITUDE_SHORE = 0.25;
+// SPEC §World scale specified shore=1.5 / deep=6, which gave ~13k cells per
+// 256 m chunk and tens of seconds per chunk to build. Scaled back so an
+// average island ends up with ~250 prism cells, chunk init drops to
+// well under a second, and the visual stays "blocky" without being noisy.
+export const WAVE_CELL_DEEP = 24;
+export const WAVE_CELL_SHORE = 12;
+export const WAVE_AMPLITUDE_DEEP = 3.0;
+export const WAVE_AMPLITUDE_SHORE = 0.6;
 // Quantisation: cellSize × WAVE_STEP_RATIO. Set to 0 to disable — each cell
 // then takes its continuous wave-function value at its centre, giving smooth
 // stepped swell rather than discrete plateaus. Set to ~0.07 (deep step ~0.42 m,
@@ -21,10 +25,11 @@ export const WAVE_STEP_RATIO = 0;
 export const NUM_GERSTNER_WAVES = 8;
 export const WIND_DIRECTION = [1, 0] as const;
 
-// Wave spectrum (Phase 4)
-export const WAVE_LAMBDA_MIN = 6;
-export const WAVE_LAMBDA_MAX = 80;
-export const WAVE_LAMBDA_PEAK = 20;
+// Wave spectrum (Phase 4). Wavelengths must clear the Nyquist gate at the
+// largest cell size — λ_min ≥ 2 × WAVE_CELL_DEEP — or deep cells go flat.
+export const WAVE_LAMBDA_MIN = 50;
+export const WAVE_LAMBDA_MAX = 240;
+export const WAVE_LAMBDA_PEAK = 100;
 export const WAVE_DIR_SPREAD = Math.PI / 6; // ±30°
 
 // Depth profile
@@ -81,12 +86,12 @@ export const BLOCK_BASE_DEPTH = -65;
 export const SIDE_FACE_TINT = 0.7;
 
 // Phase 6 wave shadow / wave–island interaction
-export const SHADOW_RESOLUTION = 48;        // texels per side (per chunk)
-export const SHADOW_LANDMASK_RESOLUTION = 64; // pre-rasterised land bitmap
-export const SHADOW_RAY_STEP = 4;           // metres per ray-cast step
+export const SHADOW_RESOLUTION = 32;        // texels per side (per chunk)
+export const SHADOW_LANDMASK_RESOLUTION = 32; // pre-rasterised land bitmap
+export const SHADOW_RAY_STEP = 8;           // metres per ray-cast step
 export const SHADOW_RECOVERY_LENGTH = 60;   // metres; e^(-d/L) recovery
-export const SHADOW_BLUR_RADIUS = 4;        // texels, perpendicular to wind
-export const CLIFF_RADIUS = 16;             // metres; cliff influence falloff
+export const SHADOW_BLUR_RADIUS = 3;        // texels, perpendicular to wind
+export const CLIFF_RADIUS = 30;             // metres; cliff influence falloff
 export const CLIFF_CHOP_AMPLITUDE = 0.6;    // metres of standing-wave at peak
 export const WIND_ROTATE_STEP = Math.PI / 8; // 22.5° per keypress
 
